@@ -38,7 +38,10 @@ class AbstractLinear(nn.Module):
         
 
         @staticmethod
-        def abstract_conv2D(conv:nn.Module,x,x_true,device=torch.device("cpu")):
+        def abstract_conv2D(conv:nn.Module,
+                            x:torch.tensor,
+                            x_true:torch.tensor,
+                            device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
             conv = conv.to(device)
             x=x.to(device)
             x_true = x_true.to(device)
@@ -240,13 +243,14 @@ class AbstractNN(nn.Module):
         self.conv2=nn.Conv2d(16,16,3,device=self.device)
         self.conv3=nn.Conv2d(16,32,3,device=self.device) 
         self.conv4=nn.Conv2d(32,32,3,device=self.device)
-        self.fc1=nn.Linear(51200,6272,device=self.device)
-        self.fc2=nn.Linear(6272,6272,device=self.device)
-        self.fc3=nn.Linear(6272,6272,device=self.device)
-        self.fc4=nn.Linear(6272,6272,device=self.device)
-        self.fc5=nn.Linear(6272,512,device=self.device)
-        self.fc6=nn.Linear(512,256,device=self.device)
-        self.fc7=nn.Linear(256,8,device=self.device)
+
+        self.fc1=nn.Sequential(nn.Flatten(),nn.Linear(51200,6272,device=self.device))
+        self.fc2=nn.Sequential(nn.Flatten(),nn.Linear(6272,6272,device=self.device))
+        self.fc3=nn.Sequential(nn.Flatten(),nn.Linear(6272,6272,device=self.device))
+        self.fc4=nn.Sequential(nn.Flatten(),nn.Linear(6272,6272,device=self.device))
+        self.fc5=nn.Sequential(nn.Flatten(),nn.Linear(6272,512,device=self.device))
+        self.fc6=nn.Sequential(nn.Flatten(),nn.Linear(512,256,device=self.device))
+        self.fc7=nn.Sequential(nn.Flatten(),nn.Linear(256,8,device=self.device))
 
     
     def forward(self,x,add_symbol=False):
