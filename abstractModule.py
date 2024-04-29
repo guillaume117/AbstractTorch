@@ -111,6 +111,7 @@ class AbstractReLU(nn.Module):
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
         
         if add_symbol:
+            """if we want to generate new symbols, we must project each of the new symbol on a specific layer"""
             """
             new_symbols_indexes =torch.where(x[-1]!=0)
 
