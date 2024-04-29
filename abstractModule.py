@@ -253,9 +253,9 @@ class AbstractNN(nn.Module):
         self.fc7=nn.Sequential(nn.Flatten(),nn.Linear(256,8,device=self.device))
 
     
-    def forward(self,x,add_symbol=False):
+    def forward(self,x,add_symbol=False,device = torch.device("cpu")):
 
-        
+        self.device = device
         x_true = x
         x_true = x_true[0].unsqueeze(0)
         print(f"lenx:{len(x)}")
