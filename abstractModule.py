@@ -33,7 +33,7 @@ class AbstractLinear(nn.Module):
             x[-1]=lin_abs(x_noise)-lin_abs(torch.zeros_like(x_noise))
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
-            print(x_min.type())
+          
             return x,x_min,x_max,x_true
         
 
@@ -106,7 +106,7 @@ class AbstractReLU(nn.Module):
         #uptade of the epsilon
         copy_x_for_approx[1:-1]=p*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
         #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=d*mask_p[-1] +p*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
+        copy_x_for_approx[-1]=d*mask_p[-1] +torch.abs(p)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
         x=copy_x_for_approx
 
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
@@ -131,6 +131,7 @@ class AbstractReLU(nn.Module):
             """
             new_eps =torch.where(x[-1]!=0)[0].to(device)
             
+            
             index = torch.arange(len(new_eps)).to(device)
             new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1).shape
             new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
@@ -139,6 +140,7 @@ class AbstractReLU(nn.Module):
             x=x[:-1]
 
             x = torch.cat((x,new_eps_batch),dim=0)
+    
 
         return x,x_min,x_max,x_true
     
@@ -174,7 +176,7 @@ class AbstractReLU(nn.Module):
         copy_x_for_approx[1:-1]=p*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
 
         #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=d*mask_p[-1] +p*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
+        copy_x_for_approx[-1]=d*mask_p[-1] +torch.abs(p)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
 
         x=copy_x_for_approx
         
@@ -196,16 +198,20 @@ class AbstractReLU(nn.Module):
                 x[-2][value]=x[-1][value]
             x[-1]=torch.zeros_like(x[-1])
             """
-                        
-            new_eps =torch.where(x[-1]!=0)[0].to(device)
+         
+            new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
+           
             index = torch.arange(len(new_eps)).to(device)
-            new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1,-1,-1).shape
+            new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
             new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-            new_eps_batch[index,new_eps]=x[-1][new_eps]
+            new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+            new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+            
 
             x=x[:-1]
 
-            x = torch.cat((x,new_eps_batch),dim=0)            
+            x = torch.cat((x,new_eps_batch),dim=0) 
+                  
 
         return x,x_min,x_max,x_true
 
