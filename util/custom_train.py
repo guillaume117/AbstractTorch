@@ -97,8 +97,8 @@ class CustomTrainer:
                     else :
                         #if the device is cuda or cpu, we need to convert the inputs and labels to the device
 
-                        inputs = inputs.to(self.device).float()
-                        label = labels.to(self.device).float()
+                        inputs = inputs.to(self.device)
+                        label = labels.to(self.device)
                         
 
                     self.optimizer.zero_grad()
