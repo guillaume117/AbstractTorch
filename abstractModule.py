@@ -82,6 +82,8 @@ class AbstractReLU(nn.Module):
                       device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
         
         num_symbols = len(x)
+        x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
+        x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
       
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
@@ -104,7 +106,7 @@ class AbstractReLU(nn.Module):
         #uptade of the epsilon
         copy_x_for_approx[1:-1]=p*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
         #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=d*mask_p[-1] +copy_x_for_approx[-1]*mask_p[-1] + mask_1[-1]*copy_x_for_approx[-1]
+        copy_x_for_approx[-1]=d*mask_p[-1] +p*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
         x=copy_x_for_approx
 
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
@@ -148,6 +150,8 @@ class AbstractReLU(nn.Module):
                              x_true:torch.tensor,
                              add_symbol:bool=False,
                              device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
+        x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
+        x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
 
         num_symbols = len(x)
         sgn_min = torch.sign(x_min)
@@ -170,7 +174,7 @@ class AbstractReLU(nn.Module):
         copy_x_for_approx[1:-1]=p*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
 
         #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=d*mask_p[-1] +copy_x_for_approx[-1]*mask_p[-1] +mask_1[-1]*copy_x_for_approx[-1]
+        copy_x_for_approx[-1]=d*mask_p[-1] +p*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
 
         x=copy_x_for_approx
         
