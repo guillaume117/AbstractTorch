@@ -4,6 +4,7 @@ import copy
 from typing import List, Union, Tuple
 
 
+
 class AbstractLinear(nn.Module):
         
         def __init__(self):
@@ -218,92 +219,81 @@ class AbstractReLU(nn.Module):
 
 
 
+class AbstractMaxpool2D(nn.Module):
+    def __init__(self,max_symbols:Union[int,bool]=False):
+       super(AbstractMaxpool2D,self).__init__()
+
+    @staticmethod
+    def abstract_maxpool2D(maxpool:nn.Module,
+                           x:torch.tensor,
+                           x_true:torch.tensor,
+                           device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
+        maxpool = maxpool.to(device)
+        kernel_size = maxpool.kernel_size
+        stride = maxpool.stride
+        padding = maxpool.padding
+        x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
+        x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
+        conv_0 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
+        conv_1 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
+        conv_2 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
+        conv_3 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
+        print("x.shape",x.shape) 
+        x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_0,x,x_true,device=device)
+        x_result,x_min_result,x_max_result,x_true_result = AbstractReLU.abstract_relu_conv2D(x_result,x_min_result,x_max_result,x_true_result,device=device)
+        x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_1,x,x_true,device=device)
+        print("okqsdqd")
+        print("x_result.shape",x_result.shape)
+        print("x_result_1.shape",x_result_1.shape)
+        x_result += x_result_1
+        print(f"x_result.shape={x_result.shape}")
+        x_min_result += x_min_result_1
+        x_max_result += x_max_result_1
+        x_true_result += x_true_result_1
+        print('okok')   
+        x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_2,x,x_true,device=device)
+        x_result_1 -= x_result
+        x_min_result_1 -= x_min_result
+        x_max_result_1 -= x_max_result
+        x_true_result_1 -= x_true_result
+        x_result_2,x_min_result_2,x_max_result_2,x_true_result_2  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,add_symbol=False,device=device)
+        x_result_2 += x_result
+        x_min_result_2 += x_min_result
+        x_max_result_2 += x_max_result
+        x_true_result_2 += x_true_result
 
 
+        x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_3,x,x_true,device=device)
+        x_result_1 -= x_result_2
+        x_min_result_1 -= x_min_result_2
+        x_max_result_1 -= x_max_result_2
+        x_true_result_1 -= x_true_result_2
+        x_result_3,x_min_result_3,x_max_result_3,x_true_result_3  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,device=device)
+        x_result_3 += x_result_2
+        x_min_result_3 += x_min_result_2
+        x_max_result_3 += x_max_result_2
+        x_true_result_3 += x_true_result_2
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class AbstractNN(nn.Module):
-    
-    def __init__(self,num_depth=1,device=torch.device("cpu")):
-
-        super(AbstractNN,self).__init__()
-       
-      
-        self.num_depth = num_depth
-        self.device = device
-        self.conv1=nn.Conv2d(self.num_depth,16,3,device=self.device)
-        self.conv2=nn.Conv2d(16,16,3,device=self.device)
-        self.conv3=nn.Conv2d(16,32,3,device=self.device) 
-        self.conv4=nn.Conv2d(32,32,3,device=self.device)
-
-        self.fc1=nn.Sequential(nn.Flatten(),nn.Linear(51200,6272,device=self.device))
-        self.fc2=nn.Sequential(nn.Flatten(),nn.Linear(6272,6272,device=self.device))
-        self.fc3=nn.Sequential(nn.Flatten(),nn.Linear(6272,6272,device=self.device))
-        self.fc4=nn.Sequential(nn.Flatten(),nn.Linear(6272,6272,device=self.device))
-        self.fc5=nn.Sequential(nn.Flatten(),nn.Linear(6272,512,device=self.device))
-        self.fc6=nn.Sequential(nn.Flatten(),nn.Linear(512,256,device=self.device))
-        self.fc7=nn.Sequential(nn.Flatten(),nn.Linear(256,8,device=self.device))
-
-    
-    def forward(self,x,add_symbol=False,device = torch.device("cpu")):
-
-        self.device = device
-        x_true = x
-        x_true = x_true[0].unsqueeze(0)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_conv2D(self.conv1,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-       
-        x,x_min,x_max,x_true = AbstractLinear.abstract_conv2D(self.conv2,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_conv2D(self.conv3,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_conv2D(self.conv4,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc1,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc2,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc3,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc4,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc5,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc6,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-
-        x,x_min,x_max,x_true = AbstractLinear.abstract_linear(self.fc7,x,x_true,device=self.device)
-        x,x_min,x_max,x_true = AbstractReLU.abstract_relu(x,x_min,x_max,x_true,add_symbol=add_symbol,device =self.device)
-        print(f"lenx:{len(x)}")
-        return x,x_min,x_max,x_true
+        """
+        x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_2,x,x_true,device=device)-[x_result,x_min_result,x_max_result,x_true_result] 
+        x_result,x_min_result,x_max_result,x_true_result  = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,device=device)+[x_result,x_min_result,x_max_result,x_true_result] 
+        x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_3,x,x_true,device=device)-[x_result,x_min_result,x_max_result,x_true_result ]
+        x_result,x_min_result,x_max_result,x_true_result  = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,device=device)+[x_result,x_min_result,x_max_result,x_true_result] 
+            """
         
+        return x_result_3,x_min_result_3,x_max_result_3,x_true_result_3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
