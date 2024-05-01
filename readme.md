@@ -1,6 +1,6 @@
 ### AbstractTorch
 
-![alt text](image.png)
+![alt text](images/image.png)
 Ceci est un prototype de moteur d'évaluation s'appuyant sur Torch. 
 
 L'idée originale consiste à utiliser la notion bien connue de batch pour faire l'évaluation d'un modèle. Cette astuce permet d'obtenir des résultats rapides ne nécessitant pas de refaire un modèle complexe. 

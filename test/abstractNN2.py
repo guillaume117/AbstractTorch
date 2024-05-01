@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from abstractModule import AbstractLinear as AL
-from abstractModule import AbstractReLU as AR
+from src.abstractModule import AbstractLinear as AL
+from src.abstractModule import AbstractReLU as AR
 
 
 class AbstractNN2(nn.Module):
