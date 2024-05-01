@@ -2,7 +2,7 @@ import torch
 
 
 class abstractTensor:
-    def __init__(self, tensor: torch.Tensor, alpha ):
+    def __init__(self, tensor: torch.Tensor, alpha: torch.Tensor ):
         self.tensor = tensor
         self.alpha = alpha
       
