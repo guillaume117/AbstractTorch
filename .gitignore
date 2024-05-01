@@ -1,2 +1,3 @@
 /dataset
 !/dataset/FMNISTMAXPOOL.pth
+__pycache__/
