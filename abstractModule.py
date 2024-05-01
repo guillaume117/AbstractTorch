@@ -90,6 +90,7 @@ class AbstractReLU(nn.Module):
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
         p = x_max/(torch.abs(x_max)+torch.abs(x_min))
+        p = torch.where(torch.isnan(p),torch.zeros_like(p),p)
         q = x_max*(1-p)/2
         d = torch.abs(q)
         x_true  = nn.ReLU()(x_true)
@@ -100,6 +101,8 @@ class AbstractReLU(nn.Module):
         #mask for the values for those the output is the same as the input (y=x)
         mask_1 =(sgn==2)*1+ (sgn==1)*1
         #expand the mask to the number of symbols
+
+        
         mask_p = mask_p.unsqueeze(0).expand(num_symbols,-1)
         mask_1 = mask_1.unsqueeze(0).expand(num_symbols,-1)
         #approximation of the center  
@@ -161,6 +164,7 @@ class AbstractReLU(nn.Module):
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
         p = x_max/(torch.abs(x_max)+torch.abs(x_min))
+        p = torch.where(torch.isnan(p),torch.zeros_like(p),p)
         q = x_max*(1-p)/2
         d = torch.abs(q)
         x_true  = nn.ReLU()(x_true)
@@ -226,62 +230,112 @@ class AbstractMaxpool2D(nn.Module):
     @staticmethod
     def abstract_maxpool2D(maxpool:nn.Module,
                            x:torch.tensor,
-                           x_true:torch.tensor,
+                           x_true:torch.tensor,add_symbol:bool=False,
                            device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
         maxpool = maxpool.to(device)
         kernel_size = maxpool.kernel_size
+        print("kernel_size",kernel_size)
+        #assert kernel_size[0]==kernel_size[1];"The kernel size must be a square"
+        assert kernel_size==2;"a kernel size different of 2 is not supported"
         stride = maxpool.stride
         padding = maxpool.padding
+        dim_x =len(x[0])
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
-        conv_0 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
-        conv_1 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
-        conv_2 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
-        conv_3 = nn.Conv2d(32, 32, 2, stride=2, padding=0)
-        print("x.shape",x.shape) 
+        
+        x_final =maxpool(x_true)
+        conv_0 = nn.Conv2d(dim_x, dim_x, kernel_size=kernel_size, stride=stride, padding=padding,groups=dim_x)
+        conv_1 = nn.Conv2d(dim_x, dim_x, kernel_size=kernel_size, stride=stride, padding=padding,groups=dim_x)
+        conv_2 = nn.Conv2d(dim_x, dim_x, kernel_size=kernel_size, stride=stride, padding=padding,groups=dim_x)
+        conv_3 = nn.Conv2d(dim_x, dim_x, kernel_size=kernel_size, stride=stride, padding=padding,groups=dim_x)
+        w_0 = torch.tensor([[[[1., -1.], [0, 0.]]]])
+        w_1 = torch.tensor([[[[0., 1.], [0, 0.]]]])
+        w_2 = torch.tensor([[[[0., 0.], [0., 1.]]]])
+        w_3 = torch.tensor([[[[0., 0.], [1., 0.]]]])
+        w_0 = w_0.expand(dim_x,-1,-1,-1)
+        w_1 = w_1.expand(dim_x,-1,-1,-1)
+        w_2 = w_2.expand(dim_x,-1,-1,-1)
+        w_3 = w_3.expand(dim_x,-1,-1,-1)
+        conv_0.weight.data = w_0
+        conv_0.bias.data =  torch.zeros(dim_x)
+        conv_1.weight.data = w_1
+        conv_1.bias.data =  torch.zeros(dim_x)
+        conv_2.weight.data = w_2
+        conv_2.bias.data =  torch.zeros(dim_x)
+        conv_3.weight.data = w_3
+        conv_3.bias.data =  torch.zeros(dim_x)
+
+       
+
+
         x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_0,x,x_true,device=device)
         x_result,x_min_result,x_max_result,x_true_result = AbstractReLU.abstract_relu_conv2D(x_result,x_min_result,x_max_result,x_true_result,device=device)
         x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_1,x,x_true,device=device)
-        print("okqsdqd")
-        print("x_result.shape",x_result.shape)
-        print("x_result_1.shape",x_result_1.shape)
-        x_result += x_result_1
-        print(f"x_result.shape={x_result.shape}")
+     
+        x_result = AbstractBasic.abstract_addition(x_result_1,x_result)
+   
         x_min_result += x_min_result_1
         x_max_result += x_max_result_1
         x_true_result += x_true_result_1
-        print('okok')   
+    
         x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_2,x,x_true,device=device)
-        x_result_1 -= x_result
+        x_result_1 = AbstractBasic.abstract_substraction(x_result_1, x_result)
         x_min_result_1 -= x_min_result
         x_max_result_1 -= x_max_result
         x_true_result_1 -= x_true_result
         x_result_2,x_min_result_2,x_max_result_2,x_true_result_2  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,add_symbol=False,device=device)
-        x_result_2 += x_result
+        x_result_2 = AbstractBasic.abstract_addition(x_result_2, x_result)
         x_min_result_2 += x_min_result
         x_max_result_2 += x_max_result
         x_true_result_2 += x_true_result
 
 
         x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_3,x,x_true,device=device)
-        x_result_1 -= x_result_2
+        x_result_1 =AbstractBasic.abstract_substraction(x_result_1, x_result_2)
         x_min_result_1 -= x_min_result_2
         x_max_result_1 -= x_max_result_2
         x_true_result_1 -= x_true_result_2
         x_result_3,x_min_result_3,x_max_result_3,x_true_result_3  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,device=device)
-        x_result_3 += x_result_2
+        x_result_3 = AbstractBasic.abstract_addition(x_result_3,x_result_2)
         x_min_result_3 += x_min_result_2
         x_max_result_3 += x_max_result_2
         x_true_result_3 += x_true_result_2
+        x= x_result_3
+        x_min = x_min_result_3
+        x_max = x_max_result_3
+        x_true = x_final
 
-        """
-        x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_2,x,x_true,device=device)-[x_result,x_min_result,x_max_result,x_true_result] 
-        x_result,x_min_result,x_max_result,x_true_result  = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,device=device)+[x_result,x_min_result,x_max_result,x_true_result] 
-        x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_3,x,x_true,device=device)-[x_result,x_min_result,x_max_result,x_true_result ]
-        x_result,x_min_result,x_max_result,x_true_result  = AbstractReLU.abstract_relu_conv2D(x,x_min,x_max,x_true,device=device)+[x_result,x_min_result,x_max_result,x_true_result] 
+        if add_symbol:
             """
+            new_symbols_indexes =torch.where(x[-1]!=0)
+
+
+            for index,value in enumerate(new_symbols_indexes[0]):
+            
+            
+                x =torch.cat((x,x[-1].unsqueeze(0)),dim=0)
+                
+                x[-2]=torch.zeros_like(x[-2])
+                
+                x[-2][value]=x[-1][value]
+            x[-1]=torch.zeros_like(x[-1])
+            """
+         
+            new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
+           
+            index = torch.arange(len(new_eps)).to(device)
+            new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
+            new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+            new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+            new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+            
+
+            x=x[:-1]
+
+            x = torch.cat((x,new_eps_batch),dim=0) 
+       
         
-        return x_result_3,x_min_result_3,x_max_result_3,x_true_result_3
+        return x,x_min,x_max,x_true
 
 
 
@@ -289,11 +343,39 @@ class AbstractMaxpool2D(nn.Module):
 
 
 
+class AbstractBasic(nn.Module):
+    def __init__(self):
+        super(AbstractBasic,self).__init__()
+    
+    @staticmethod
+    
+    def abstract_addition(x:torch.tensor,
+                          y:torch.tensor)->torch.tensor:
+        """ This function abstracts the addition of two abstract tensors x and y
+        the last layer (noise layer is added is the sum of the absolute values of the last layer of x and y
+        input : x : tensor : the first tensor
+                y : tensor : the second tensor
+                output : z : tensor : the result of the addition
+                """
+        assert x.shape==y.shape; "The two tensors must have the same shape"
+        z = x+y
+        
+        z[-1] = torch.abs(x[-1])+torch.abs(y[-1])
+        return z
+    @staticmethod
 
-
-
-
-
-
+    def abstract_substraction(x:torch.tensor,
+                              y:torch.tensor)->torch.tensor:
+        """ This function abstracts the substraction of two abstract tensors x and y
+        the last layer (noise layer is added is the sum of the absolute values of the last layer of x and y
+        input : x : tensor : the first tensor
+                y : tensor : the second tensor
+                output : z : tensor : the result of the substraction
+                """
+        assert x.shape==y.shape; "The two tensors must have the same shape"
+        z = x-y
+        z[-1] = torch.abs(x[-1])+torch.abs(y[-1])
+        return z
+    
 
 
