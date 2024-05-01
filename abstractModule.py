@@ -234,9 +234,9 @@ class AbstractMaxpool2D(nn.Module):
                            device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
         maxpool = maxpool.to(device)
         kernel_size = maxpool.kernel_size
-        print("kernel_size",kernel_size)
+
         #assert kernel_size[0]==kernel_size[1];"The kernel size must be a square"
-        assert kernel_size==2;"a kernel size different of 2 is not supported"
+        assert kernel_size==2,f"Maxpool2D kernel size {kernel_size}. A kernel size different of 2 is not supported"
         stride = maxpool.stride
         padding = maxpool.padding
         dim_x =len(x[0])
