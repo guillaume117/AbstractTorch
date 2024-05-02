@@ -89,10 +89,10 @@ class AbstractReLU(nn.Module):
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
-        p = x_max/(torch.abs(x_max)+torch.abs(x_min))
-        p = torch.where(torch.isnan(p),torch.zeros_like(p),p)
-        q = x_max*(1-p)/2
-        d = torch.abs(q)
+        coef_approx_linear = x_max/(torch.abs(x_max)+torch.abs(x_min))
+        coef_approx_linear = torch.where(torch.isnan(coef_approx_linear),torch.zeros_like(coef_approx_linear),coef_approx_linear)
+        bias_approx_linear = x_max*(1-coef_approx_linear)/2
+        noise_approx_linear = torch.abs(bias_approx_linear)
         x_true  = nn.ReLU()(x_true)
         copy_x_for_approx = x
 
@@ -106,11 +106,11 @@ class AbstractReLU(nn.Module):
         mask_p = mask_p.unsqueeze(0).expand(num_symbols,-1)
         mask_1 = mask_1.unsqueeze(0).expand(num_symbols,-1)
         #approximation of the center  
-        copy_x_for_approx[0]= mask_p[0]*(p*copy_x_for_approx[0]+q)+mask_1[0]*copy_x_for_approx[0]
+        copy_x_for_approx[0]= mask_p[0]*(coef_approx_linear*copy_x_for_approx[0]+bias_approx_linear)+mask_1[0]*copy_x_for_approx[0]
         #uptade of the epsilon
-        copy_x_for_approx[1:-1]=p*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
+        copy_x_for_approx[1:-1]=coef_approx_linear*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
         #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=d*mask_p[-1] +torch.abs(p)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
+        copy_x_for_approx[-1]=noise_approx_linear*mask_p[-1] +torch.abs(coef_approx_linear)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
         x=copy_x_for_approx
 
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
@@ -163,10 +163,10 @@ class AbstractReLU(nn.Module):
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
-        p = x_max/(torch.abs(x_max)+torch.abs(x_min))
-        p = torch.where(torch.isnan(p),torch.zeros_like(p),p)
-        q = x_max*(1-p)/2
-        d = torch.abs(q)
+        coef_approx_linear = x_max/(torch.abs(x_max)+torch.abs(x_min))
+        coef_approx_linear = torch.where(torch.isnan(coef_approx_linear),torch.zeros_like(coef_approx_linear),coef_approx_linear)
+        bias_approx_linear = x_max*(1-coef_approx_linear)/2
+        noise_approx_linear = torch.abs(bias_approx_linear)
         x_true  = nn.ReLU()(x_true)
         copy_x_for_approx = x
         mask_p = (sgn==0)*1
@@ -174,14 +174,14 @@ class AbstractReLU(nn.Module):
         mask_p = mask_p.unsqueeze(0).expand(num_symbols,-1,-1,-1)
         mask_1 = mask_1.unsqueeze(0).expand(num_symbols,-1,-1,-1)
         
-        #approximation of the center 0, (p*x+q) or the value itself 
-        copy_x_for_approx[0]= mask_p[0]*(p*copy_x_for_approx[0]+q)+mask_1[0]*copy_x_for_approx[0]
+        #approximation of the center 0, (coef_approx_linear*x+bias_approx_linear) or the value itself 
+        copy_x_for_approx[0]= mask_p[0]*(coef_approx_linear*copy_x_for_approx[0]+bias_approx_linear)+mask_1[0]*copy_x_for_approx[0]
         
         #update of the epsilon
-        copy_x_for_approx[1:-1]=p*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
+        copy_x_for_approx[1:-1]=coef_approx_linear*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
 
         #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=d*mask_p[-1] +torch.abs(p)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
+        copy_x_for_approx[-1]=noise_approx_linear*mask_p[-1] +torch.abs(coef_approx_linear)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
 
         x=copy_x_for_approx
         
@@ -345,7 +345,9 @@ class AbstractMaxpool2D(nn.Module):
 
 class AbstractBasic(nn.Module):
     def __init__(self):
+        """Since you cannot add an abstract tensor like a vulgare tensor"""
         super(AbstractBasic,self).__init__()
+
     
     @staticmethod
     
