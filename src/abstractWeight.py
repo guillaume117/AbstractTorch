@@ -22,20 +22,27 @@ class AbstractWeight(nn.Module):
                      device = torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: 
         weight_of_layer = fully_connected_layer[1].weight.data
         bias_of_layer = fully_connected_layer[1].bias.data
-        input = input.flatten().to(device)
+        intermediate_layer = copy.deepcopy(fully_connected_layer).to(device)
+       
         index = index.to(device)
         output=[]
+        print(f"input.shape: {input.shape}")
         x = fully_connected_layer(input)
+        print(f"x.shape: {x.shape}")
         output.append(x)
         for i in range(1,len(alpha)+1):
-            weight_epsilon = torch.zeros_like(weight_of_layer)
-            weight_epsilon[index]=alpha[i-1]
-            fully_connected_layer[1].weight.data = weight_of_layer
-            abstract_tensor_layer = fully_connected_layer(input)-fully_connected_layer(torch.zeros_like(input))     
+            weight_epsilon = torch.zeros_like(weight_of_layer).flatten()
+            weight_epsilon[index[i-1]]=alpha[i-1]
+            weight_epsilon = weight_epsilon.reshape(weight_of_layer.shape)
+            intermediate_layer[1].weight.data = weight_epsilon
+            abstract_tensor_layer = intermediate_layer(input)-intermediate_layer(torch.zeros_like(input))     
+
             output.append(abstract_tensor_layer)
         output.append(torch.zeros_like(x))
+        output = torch.stack(output).squeeze(1)
 
         output_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         output_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
+        print(f"output.shape: {output.shape}")
         return output,output_min,output_max, x
        

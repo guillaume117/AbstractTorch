@@ -13,8 +13,8 @@ L'implémentation du modèle abstrait comporte une quantité fixe de symboles qu
 L'option add_symbol permet de générer de nouveaux symboles/ 
 L'inférence peut se faire soit sur cpu (device=torch.device('cpu')) ou carte graphique (device = torch.device('cuda'ou 'mps'))
 
-Pour l'instant sont implémentées les classes conv2D, Linear , et ReLU. 
-        #TODO implémenter maxpool2D, ... 
+Pour l'instant sont implémentées les classes conv2D, Linear , maxpool2D(noyau 2) et ReLU.
+        
     
 
 On tire profit de la structure de base
