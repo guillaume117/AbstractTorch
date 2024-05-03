@@ -1,3 +1,4 @@
 dataset/*
 !/dataset/FMNISTMAXPOOL.pth
+!/dataset/test.pth
 __pycache__/
