@@ -2,3 +2,4 @@ dataset/*
 !/dataset/FMNISTMAXPOOL.pth
 !/dataset/test.pth
 __pycache__/
+notebook/dataset/FashionMNIST/*
