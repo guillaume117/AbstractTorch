@@ -19,8 +19,11 @@ class AbstractLinear(nn.Module):
             lin=lin.to(device)
             x =x.unsqueeze(1).to(device)
             x_true=x_true.to(device)
-            lin_abs = copy.deepcopy(lin).to(device)
-            lin_abs[1].weight.data =torch.abs(lin[1].weight.data)
+            lin_copy_bias_null = copy.deepcopy(lin).to(device)
+            lin_copy_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data)
+            lin_abs_bias_null = copy.deepcopy(lin).to(device)
+            lin_abs_bias_null[1].weight.data =torch.abs(lin[1].weight.data)
+            lin_abs_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data)
         
             
             x_value = x[0].unsqueeze(1)
@@ -30,8 +33,8 @@ class AbstractLinear(nn.Module):
             x=lin(x)    
             x_true = lin(x_true)
             x[0]=lin(x_value)
-            x[1:-1]=lin(x_epsilon)-lin(torch.zeros_like(x_epsilon))
-            x[-1]=lin_abs(x_noise)-lin_abs(torch.zeros_like(x_noise))
+            x[1:-1]=lin_copy_bias_null(x_epsilon)
+            x[-1]=lin_abs_bias_null(x_noise)
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
           
@@ -48,8 +51,11 @@ class AbstractLinear(nn.Module):
             x_true = x_true.to(device)
             print(f"x.shape={x.shape}")
         
-            conv_abs = copy.deepcopy(conv).to(device)
-            conv_abs.weight.data = torch.abs(conv.weight.data)
+            conv_abs_bias_null = copy.deepcopy(conv).to(device)
+            conv_copy_bias_null = copy.deepcopy(conv).to(device)
+            conv_copy_bias_null.bias.data = torch.zeros_like(conv.bias.data)
+            conv_abs_bias_null.weight.data = torch.abs(conv.weight.data)
+            conv_abs_bias_null.bias.data = torch.zeros_like(conv.bias.data)
         
         
             x_value = x[0]
@@ -58,8 +64,8 @@ class AbstractLinear(nn.Module):
             x=conv(x)
             x[0]=conv(x_value)
             x_true = conv(x_true)
-            x[1:-1]=conv(x_epsilon)-conv(torch.zeros_like(x_epsilon).to(device))
-            x[-1]=conv_abs(x_noise)-conv_abs(torch.zeros_like(x_noise).to(device))
+            x[1:-1]=conv_copy_bias_null(x_epsilon)
+            x[-1]=conv_abs_bias_null(x_noise)
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
             
@@ -235,8 +241,8 @@ class AbstractMaxpool2D(nn.Module):
         maxpool = maxpool.to(device)
         kernel_size = maxpool.kernel_size
 
-        #assert kernel_size[0]==kernel_size[1];"The kernel size must be a square"
         assert kernel_size==2,f"Maxpool2D kernel size {kernel_size}. A kernel size different of 2 is not supported"
+
         stride = maxpool.stride
         padding = maxpool.padding
         dim_x =len(x[0])
@@ -265,15 +271,13 @@ class AbstractMaxpool2D(nn.Module):
         conv_3.weight.data = w_3
         conv_3.bias.data =  torch.zeros(dim_x)
 
-       
+       #max(a,b,c,d) = relu(relu(relu(a-b)+b)+c)+d)
 
 
         x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_0,x,x_true,device=device)
         x_result,x_min_result,x_max_result,x_true_result = AbstractReLU.abstract_relu_conv2D(x_result,x_min_result,x_max_result,x_true_result,device=device)
         x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_1,x,x_true,device=device)
-     
         x_result = AbstractBasic.abstract_addition(x_result_1,x_result)
-   
         x_min_result += x_min_result_1
         x_max_result += x_max_result_1
         x_true_result += x_true_result_1
@@ -308,17 +312,6 @@ class AbstractMaxpool2D(nn.Module):
         if add_symbol:
             """
             new_symbols_indexes =torch.where(x[-1]!=0)
-
-
-            for index,value in enumerate(new_symbols_indexes[0]):
-            
-            
-                x =torch.cat((x,x[-1].unsqueeze(0)),dim=0)
-                
-                x[-2]=torch.zeros_like(x[-2])
-                
-                x[-2][value]=x[-1][value]
-            x[-1]=torch.zeros_like(x[-1])
             """
          
             new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
