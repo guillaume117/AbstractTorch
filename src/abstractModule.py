@@ -27,19 +27,21 @@ class AbstractLinear(nn.Module):
             lin_abs_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data)
         
             
-            x_value = x[0].unsqueeze(1)
-            x_epsilon= x[1:-1].unsqueeze(1)
-            x_noise =x[-1].unsqueeze(1)
-        
-            x=lin(x)    
-            x_true = lin(x_true)
-            x[0]=lin(x_value)
-            x[1:-1]=lin_copy_bias_null(x_epsilon)
-            x[-1]=lin_abs_bias_null(x_noise)
+            
+            
+            with torch.no_grad():    
+                x_true = lin(x_true)
+                x_value=lin(x[0])
+                x_epsilon=lin_copy_bias_null(x[1:-1])
+                x_noise=lin_abs_bias_null(x[-1])
+            del x
+            x = torch.cat((x_value,x_epsilon,x_noise),dim=0)
+            del x_value,x_epsilon,x_noise,lin_abs_bias_null,lin_copy_bias_null,
+            gc.collect()
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
-            del x_value,x_epsilon,x_noise
-            gc.collect()
+            
+           
           
             return x,x_min,x_max,x_true
         
@@ -50,6 +52,7 @@ class AbstractLinear(nn.Module):
                             x_true:torch.tensor,
                             device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
             conv = conv.to(device)
+            print(conv.weight.shape)
             x=x.to(device)
             x_true = x_true.to(device)
           
@@ -59,23 +62,20 @@ class AbstractLinear(nn.Module):
             conv_copy_bias_null.bias.data = torch.zeros_like(conv.bias.data)
             conv_abs_bias_null.weight.data = torch.abs(conv.weight.data)
             conv_abs_bias_null.bias.data = torch.zeros_like(conv.bias.data)
+            with torch.no_grad():
+            
+                x_true = conv(x_true)
+                x_value=conv(x[0]).unsqueeze(0)
+                x_epsilon=conv_copy_bias_null(x[1:-1])
         
-        
-            x_value = x[0]
-            x_epsilon= x[1:-1]
-            x_noise = x[-1]
-            x=conv(x)
-            x[0]=conv(x_value)
-            x_true = conv(x_true)
-            x[1:-1]=conv_copy_bias_null(x_epsilon)
-            x[-1]=conv_abs_bias_null(x_noise)
+                x_noise=conv_abs_bias_null(x[-1]).unsqueeze(0)
+            del x
+            x = torch.cat((x_value,x_epsilon,x_noise),dim=0)
+            del x_value,x_epsilon,x_noise,conv_abs_bias_null, conv_copy_bias_null
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
+            return x,x_min,x_max,x_true 
             
-            del x_value,x_epsilon,x_noise
-            gc.collect()
-
-            return x,x_min,x_max,x_true
 
 
 

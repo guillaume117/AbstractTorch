@@ -24,12 +24,12 @@ un symbole abstrait. La dernière couche correspond au symbole poubelle.
 
 La couche 0 représente le centre du zonotope
 Les couches suivantes représentent les symboles. Elles sont calculées pour les opération linéaires (Linear et Conv2D) par 
-$$\textbf{W}(x_\epsilon)+\textbf{b}-(\textbf{W}(0)+\textbf{b})$$
+$$\textbf{W}(x_\epsilon)$$
     x[1:]=lin(x_epsilon)-lin(torch.zeros_like(x_epsilon))
 
 La derniere couche est toujours celle du bruit poubelle. Sur cette couche uniquement, les opérations linéaires  sont  calculées de la façon suivantes: 
 
-$$\textbf{|W|}(x_\epsilon)+\textbf{b}-(\textbf{|W|}(0)+\textbf{b})$$
+$$\textbf{|W|}(x_{\epsilon_{noise}})$$
 
 
 Pour implémenter le tenseur linéaire représentant la valeur absolue, on duplique la couche lin ou conv et on applique la valeur absolue à la matrice de poids. 
@@ -41,7 +41,13 @@ Cette dernière couche peut être nulle si les symboles générés sont projeté
 ## Implémentation
 Une classe abstractModule permet de réaliser les différentes opérations abstraites. 
 Chacune des méthodes doit prendre en argument (centre,valeur_min,valeur_max,valeur vraie) et retourner (centre,valeur_min,valeur_max,valeur vraie). Si les arguments x_min et x_max n'ont aucune importance pour les couches linéaire, cette standardisation facilite l'écriture d'une méthode abstract_forward.
+
+Une classe abstractWeight permet de tester un domaine abstrait dont les formes affines sont issues des poids d'une couche fully connected. 
  
+## Empreinte mémoire 
+Un tenseur torch de dimension $N * C * H * W$ en float 32 possède une empreinte mémoire de  $N * C * H * W *4 *10^{-9}$ GB
+Un domaine abstrait basée sur une image de taille 3 * 224 * 224 génère une empreinte d'environ 90 GB. 
+si l'on applique une couche de convolution de noyau 64 , on aura un tenseur de 2 TO. Le code essaie d'éviter les copies intégrales du tenseur abstrait en cours d'évaluation, la mise à jours des variables est faite récurssivement dans les classes ReLU (x[index]=k*x[index]).
 
 
 
