@@ -93,16 +93,16 @@ class AbstractReLU(nn.Module):
                       x_true:torch.Tensor,
                       add_symbol:bool=False,
                       device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
-        print("abstract relu started")
+
         num_symbols = len(x)
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
-        print('x_min passed')
+
       
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
-        print('sgn passed')
+
         coef_approx_linear = x_max/(torch.abs(x_max)+torch.abs(x_min))
         coef_approx_linear = torch.where(torch.isnan(coef_approx_linear),torch.zeros_like(coef_approx_linear),coef_approx_linear)
         bias_approx_linear = x_max*(1-coef_approx_linear)/2
@@ -169,25 +169,23 @@ class AbstractReLU(nn.Module):
                              x_true:torch.tensor,
                              add_symbol:bool=False,
                              device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
-        print("abstract relu started")
+      
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
-        print('x_min and max passed')
+       
         num_symbols = len(x)
-        print('len(x) passed')
+       
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
-        print('sgn passed')
+        
         coef_approx_linear = x_max/(torch.abs(x_max)+torch.abs(x_min))
         coef_approx_linear = torch.where(torch.isnan(coef_approx_linear),torch.zeros_like(coef_approx_linear),coef_approx_linear)
         bias_approx_linear = x_max*(1-coef_approx_linear)/2
         noise_approx_linear = torch.abs(bias_approx_linear)
 
         x_true  = nn.ReLU()(x_true)
-        print('x_true passed')
-        print(f"sgn.shape = {sgn.shape}")   
-        print('copy_x_for_approx passed')
+    
       
         
         mask_p = (sgn==0)
