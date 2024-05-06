@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn 
 import copy
 from typing import List, Union, Tuple
+import gc
 
 
 
@@ -37,6 +38,8 @@ class AbstractLinear(nn.Module):
             x[-1]=lin_abs_bias_null(x_noise)
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
+            del x_value,x_epsilon,x_noise
+            gc.collect()
           
             return x,x_min,x_max,x_true
         
@@ -49,7 +52,7 @@ class AbstractLinear(nn.Module):
             conv = conv.to(device)
             x=x.to(device)
             x_true = x_true.to(device)
-            print(f"x.shape={x.shape}")
+          
         
             conv_abs_bias_null = copy.deepcopy(conv).to(device)
             conv_copy_bias_null = copy.deepcopy(conv).to(device)
@@ -69,6 +72,9 @@ class AbstractLinear(nn.Module):
             x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
             
+            del x_value,x_epsilon,x_noise
+            gc.collect()
+
             return x,x_min,x_max,x_true
 
 
@@ -87,38 +93,39 @@ class AbstractReLU(nn.Module):
                       x_true:torch.Tensor,
                       add_symbol:bool=False,
                       device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
-        
+        print("abstract relu started")
         num_symbols = len(x)
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
+        print('x_min passed')
       
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
+        print('sgn passed')
         coef_approx_linear = x_max/(torch.abs(x_max)+torch.abs(x_min))
         coef_approx_linear = torch.where(torch.isnan(coef_approx_linear),torch.zeros_like(coef_approx_linear),coef_approx_linear)
         bias_approx_linear = x_max*(1-coef_approx_linear)/2
         noise_approx_linear = torch.abs(bias_approx_linear)
         x_true  = nn.ReLU()(x_true)
-        copy_x_for_approx = x
-
-        #mask for values that will be approximated by the linear approximation
-        mask_p = (sgn==0)*1
-        #mask for the values for those the output is the same as the input (y=x)
-        mask_1 =(sgn==2)*1+ (sgn==1)*1
-        #expand the mask to the number of symbols
+       
 
         
-        mask_p = mask_p.unsqueeze(0).expand(num_symbols,-1)
-        mask_1 = mask_1.unsqueeze(0).expand(num_symbols,-1)
-        #approximation of the center  
-        copy_x_for_approx[0]= mask_p[0]*(coef_approx_linear*copy_x_for_approx[0]+bias_approx_linear)+mask_1[0]*copy_x_for_approx[0]
-        #uptade of the epsilon
-        copy_x_for_approx[1:-1]=coef_approx_linear*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
-        #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=noise_approx_linear*mask_p[-1] +torch.abs(coef_approx_linear)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
-        x=copy_x_for_approx
+        mask_p = (sgn==0)
+        mask_1 =(sgn==2) + (sgn==1)
+        mask_0 = (sgn==-2)+(sgn==-1)
+        x[0,mask_p]=(coef_approx_linear[mask_p]*x[0,mask_p]+bias_approx_linear[mask_p])
+        x[0,mask_1]=x[0,mask_1]
+        x[0,mask_0]=0
 
+        x[1:-1,mask_p]=coef_approx_linear[mask_p]*x[1:-1,mask_p]
+        x[1:-1,mask_1]=x[1:-1,mask_1]
+        x[1:-1,mask_0]=0
+        x[-1,mask_p]=noise_approx_linear[mask_p]+torch.abs(coef_approx_linear[mask_p])*x[-1,mask_p]
+        x[-1,mask_1]=x[-1,mask_1]
+        x[-1,mask_0]=0
+        del sgn_min,sgn_max,sgn,coef_approx_linear,bias_approx_linear,noise_approx_linear, mask_0,mask_1,mask_p
+        gc.collect()
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
         
@@ -162,35 +169,46 @@ class AbstractReLU(nn.Module):
                              x_true:torch.tensor,
                              add_symbol:bool=False,
                              device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
+        print("abstract relu started")
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
-
+        print('x_min and max passed')
         num_symbols = len(x)
+        print('len(x) passed')
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
         sgn = sgn_min+sgn_max
+        print('sgn passed')
         coef_approx_linear = x_max/(torch.abs(x_max)+torch.abs(x_min))
         coef_approx_linear = torch.where(torch.isnan(coef_approx_linear),torch.zeros_like(coef_approx_linear),coef_approx_linear)
         bias_approx_linear = x_max*(1-coef_approx_linear)/2
         noise_approx_linear = torch.abs(bias_approx_linear)
+
         x_true  = nn.ReLU()(x_true)
-        copy_x_for_approx = x
-        mask_p = (sgn==0)*1
-        mask_1 =(sgn==2)*1 + (sgn==1)*1
-        mask_p = mask_p.unsqueeze(0).expand(num_symbols,-1,-1,-1)
-        mask_1 = mask_1.unsqueeze(0).expand(num_symbols,-1,-1,-1)
+        print('x_true passed')
+        print(f"sgn.shape = {sgn.shape}")   
+        print('copy_x_for_approx passed')
+      
         
-        #approximation of the center 0, (coef_approx_linear*x+bias_approx_linear) or the value itself 
-        copy_x_for_approx[0]= mask_p[0]*(coef_approx_linear*copy_x_for_approx[0]+bias_approx_linear)+mask_1[0]*copy_x_for_approx[0]
-        
-        #update of the epsilon
-        copy_x_for_approx[1:-1]=coef_approx_linear*mask_p[1:-1]*copy_x_for_approx[1:-1] + mask_1[1:-1]*copy_x_for_approx[1:-1]
+        mask_p = (sgn==0)
+        mask_1 =(sgn==2) + (sgn==1)
+        mask_0 = (sgn==-2)+(sgn==-1)
+        x[0,mask_p]=(coef_approx_linear[mask_p]*x[0,mask_p]+bias_approx_linear[mask_p])
+        x[0,mask_1]=x[0,mask_1]
+        x[0,mask_0]=0
 
-        #update of the noise symbol -> projection 0, |W|*espilon_noise or new noise if new linear approximation
-        copy_x_for_approx[-1]=noise_approx_linear*mask_p[-1] +torch.abs(coef_approx_linear)*mask_p[-1]*copy_x_for_approx[-1] + mask_1[-1]*copy_x_for_approx[-1]
+        x[1:-1,mask_p]=coef_approx_linear[mask_p]*x[1:-1,mask_p]
+        x[1:-1,mask_1]=x[1:-1,mask_1]
+        x[1:-1,mask_0]=0
+        x[-1,mask_p]=noise_approx_linear[mask_p]+torch.abs(coef_approx_linear[mask_p])*x[-1,mask_p]
+        x[-1,mask_1]=x[-1,mask_1]
+        x[-1,mask_0]=0
 
-        x=copy_x_for_approx
-        
+        del sgn_min,sgn_max,sgn,coef_approx_linear,bias_approx_linear,noise_approx_linear, mask_0,mask_1,mask_p
+        gc.collect()
+
+
+
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
         
