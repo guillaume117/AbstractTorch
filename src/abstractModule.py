@@ -389,4 +389,19 @@ class AbstractBasic(nn.Module):
         return z
     
 
+class abstractAvgPool2D(nn.Module):
+    def __init__(self):
+        super(abstractAvgPool2D,self).__init__()
 
+    @staticmethod
+    def abstract_AvgPool2D(avgPool2D: nn.Module, x: torch.tensor,x_true: torch.tensor, device: torch.device = torch.device("cpu")) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        x_true = avgPool2D(x_true)
+        x_center = avgPool2D(x[0]).unsqueeze(0)
+        x_epsilon = avgPool2D(x[1:-1])
+        x_noise = avgPool2D(torch.abs(x[-1])).unsqueeze(0)
+        x = torch.cat((x_center,x_epsilon,x_noise),dim=0)
+        del x_center,x_epsilon,x_noise
+        x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
+        x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
+
+        return x,x_min,x_max,x_true

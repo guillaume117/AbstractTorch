@@ -1,7 +1,7 @@
-### AbstractTorch
+### AbstractTorch 🦸
 
 ![alt text](images/image.png)
-Ceci est un prototype de moteur d'évaluation s'appuyant sur Torch. 
+Ceci est un prototype de moteur d'évaluation s'appuyant sur Torch 😎
 
 L'idée originale consiste à utiliser la notion bien connue de batch pour faire l'évaluation d'un modèle. Cette astuce permet d'obtenir des résultats rapides ne nécessitant pas de refaire un modèle complexe. 
 Par ailleurs, un autre avantage réside dans le fait que ce moteur d'évaluation permet de réaliser les calculs indisctinctement sur CPU ou sur GPU. 
@@ -15,7 +15,9 @@ L'inférence peut se faire soit sur cpu (device=torch.device('cpu')) ou carte gr
 
 Pour l'instant sont implémentées les classes conv2D, Linear , maxpool2D(noyau 2) et ReLU.
         
-    
+# New feature :
+
+ 	🥳🥳🥳 avgpool est implémentée 	🥳🥳🥳     
 
 On tire profit de la structure de base
 de la méthode forward. Au lieu de considérer un batch, on considère une entrée en dimension 0 avec dans les dimensions habituelles du batch des couches de symbole. Une couche (un épaisseur de batch) représente
@@ -44,10 +46,13 @@ Chacune des méthodes doit prendre en argument (centre,valeur_min,valeur_max,val
 
 Une classe abstractWeight permet de tester un domaine abstrait dont les formes affines sont issues des poids d'une couche fully connected. 
  
-## Empreinte mémoire 
+## Empreinte mémoire 🧑‍🦽‍➡️
+AbstractTorch est gourmand, très gourmand:
 Un tenseur torch de dimension $N * C * H * W$ en float 32 possède une empreinte mémoire de  $N * C * H * W *4 *10^{-9}$ GB
 Un domaine abstrait basée sur une image de taille 3 * 224 * 224 génère une empreinte d'environ 90 GB. 
 si l'on applique une couche de convolution de noyau 64 , on aura un tenseur de 2 TO. Le code essaie d'éviter les copies intégrales du tenseur abstrait en cours d'évaluation, la mise à jours des variables est faite récurssivement dans les classes ReLU (x[index]=k*x[index]).
+
+🏃La bonne nouvelle c'est qu'on peut borner l'empreinte mémoire (caractéristique à venir, 👷... )
 
 
 
