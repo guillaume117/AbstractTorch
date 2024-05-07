@@ -68,7 +68,7 @@ Un tenseur torch de dimension $N * C * H * W$ en float 32 possède une empreinte
 Un domaine abstrait basée sur une image de taille 3 * 224 * 224 génère une empreinte d'environ 90 GB. 
 si l'on applique une couche de convolution de noyau 64 , on aura un tenseur de 2 TO. Le code essaie d'éviter les copies intégrales du tenseur abstrait en cours d'évaluation, la mise à jours des variables est faite récurssivement dans les classes ReLU (x[index]=k*x[index]).
 
-🏃La bonne nouvelle c'est que l'on pourra borner l'empreinte mémoire (caractéristique à venir, 👷... )
+🏃La bonne nouvelle c'est que l'on peut borner l'empreinte mémoire en gérant finement les paramètres globaux max_symbol 
 
 
 

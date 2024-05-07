@@ -52,7 +52,6 @@ class AbstractLinear(nn.Module):
                             x_true:torch.tensor,
                             device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
             conv = conv.to(device)
-            print(conv.weight.shape)
             x=x.to(device)
             x_true = x_true.to(device)
           
@@ -86,6 +85,12 @@ class AbstractReLU(nn.Module):
     def __init__(self,max_symbols:Union[int,bool]=False):
         super(AbstractReLU,self).__init__()
 
+        
+    global max_symbol
+    global recycling
+   
+        
+
     @staticmethod
     def abstract_relu(x:torch.Tensor,
                       x_min:torch.Tensor,
@@ -94,7 +99,7 @@ class AbstractReLU(nn.Module):
                       add_symbol:bool=False,
                       device:torch.device=torch.device("cpu"))->Tuple[torch.Tensor, torch.Tensor, torch.Tensor ]:
 
-        num_symbols = len(x)
+ 
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
 
@@ -130,33 +135,38 @@ class AbstractReLU(nn.Module):
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
         
         if add_symbol:
-            """if we want to generate new symbols, we must project each of the new symbol on a specific layer"""
-            """
-            new_symbols_indexes =torch.where(x[-1]!=0)
+            if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0])>AbstractReLU.max_symbol:
+                recycle_symbols = AbstractReLU.recycling*(AbstractReLU.max_symbol - len(x)+2)
+                recycle_symbols = int(recycle_symbols)
+                if recycle_symbols>0:
+                    new_eps = torch.topk(torch.where(x[-1]!=0)[0],recycle_symbols).indices.to(device)
+                    print("Relu test",new_eps[0])
+                    index = torch.arange(len(new_eps)).to(device)
+                    new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1).shape
+                    new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+                    new_eps_batch[index,new_eps]=x[-1][new_eps]
 
-
-            for index,value in enumerate(new_symbols_indexes[0]):
-            
-            
-                x =torch.cat((x,x[-1].unsqueeze(0)),dim=0)
+                    new_eps_batch_last = x[-1]
+                    new_eps_batch_last[new_eps]=0
+                    new_eps_batch[-1] = new_eps_batch_last
+                    
                 
-                x[-2]=torch.zeros_like(x[-2])
-                
-                x[-2][value]=x[-1][value]
-            x[-1]=torch.zeros_like(x[-1])
-            
-            """
-            new_eps =torch.where(x[-1]!=0)[0].to(device)
-            
-            
-            index = torch.arange(len(new_eps)).to(device)
-            new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1).shape
-            new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-            new_eps_batch[index,new_eps]=x[-1][new_eps]
+                    x=x[:-1]
 
-            x=x[:-1]
+                    x = torch.cat((x,new_eps_batch),dim=0)
+                else :
+                    pass
+            else :
+                #new_symbols_indexes =torch.where(x[-1]!=0)
+                new_eps =torch.where(x[-1]!=0)[0].to(device)
+                index = torch.arange(len(new_eps)).to(device)
+                new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1).shape
+                new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+                new_eps_batch[index,new_eps]=x[-1][new_eps]
 
-            x = torch.cat((x,new_eps_batch),dim=0)
+                x=x[:-1]
+
+                x = torch.cat((x,new_eps_batch),dim=0)
     
 
         return x,x_min,x_max,x_true
@@ -173,7 +183,7 @@ class AbstractReLU(nn.Module):
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
        
-        num_symbols = len(x)
+        
        
         sgn_min = torch.sign(x_min)
         sgn_max = torch.sign(x_max)
@@ -210,35 +220,46 @@ class AbstractReLU(nn.Module):
         x_min = x[0] - torch.sum(torch.abs(x[1:]),dim=0)
         x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
         
+       
         if add_symbol:
-            """
-            new_symbols_indexes =torch.where(x[-1]!=0)
-
-
-            for index,value in enumerate(new_symbols_indexes[0]):
+              
             
-            
-                x =torch.cat((x,x[-1].unsqueeze(0)),dim=0)
+            if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0]) >AbstractReLU.max_symbol:
+                recycle_symbols = AbstractReLU.recycling*(AbstractReLU.max_symbol - len(x)+2)
+                recycle_symbols = int(recycle_symbols)
+                print(recycle_symbols)
+                if recycle_symbols>0:
+
+                    new_eps = torch.topk(torch.where(x[-1].flatten()!=0)[0],recycle_symbols).indices.to(device)
+                    print("Relu test",new_eps[0])
+                    index = torch.arange(len(new_eps)).to(device)
+                    new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
+                    new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+                    new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+
+                    new_eps_batch_last = x[-1].flatten()
+                    new_eps_batch_last[new_eps]=0
+                    new_eps_batch[-1] = new_eps_batch_last
+                    new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
                 
-                x[-2]=torch.zeros_like(x[-2])
-                
-                x[-2][value]=x[-1][value]
-            x[-1]=torch.zeros_like(x[-1])
-            """
-         
-            new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
-           
-            index = torch.arange(len(new_eps)).to(device)
-            new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
-            new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-            new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
-            new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+                    x=x[:-1]
+
+                    x = torch.cat((x,new_eps_batch),dim=0) 
+                else : pass 
+            else :
+                new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
             
+                index = torch.arange(len(new_eps)).to(device)
+                new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
+                new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+                new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+                new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+                
 
-            x=x[:-1]
+                x=x[:-1]
 
-            x = torch.cat((x,new_eps_batch),dim=0) 
-                  
+                x = torch.cat((x,new_eps_batch),dim=0) 
+                    
 
         return x,x_min,x_max,x_true
 
@@ -248,6 +269,11 @@ class AbstractReLU(nn.Module):
 class AbstractMaxpool2D(nn.Module):
     def __init__(self,max_symbols:Union[int,bool]=False):
        super(AbstractMaxpool2D,self).__init__()
+   
+   
+    global max_symbol
+    global recycling
+    
 
     @staticmethod
     def abstract_maxpool2D(maxpool:nn.Module,
@@ -326,22 +352,48 @@ class AbstractMaxpool2D(nn.Module):
         x_true = x_final
 
         if add_symbol:
-            """
-            new_symbols_indexes =torch.where(x[-1]!=0)
-            """
-         
-            new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
-           
-            index = torch.arange(len(new_eps)).to(device)
-            new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
-            new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-            new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
-            new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+             
+            if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0])>AbstractMaxpool2D.max_symbol:
+                recycle_symbols = AbstractMaxpool2D.recycling*(AbstractMaxpool2D.max_symbol - len(x)+2)
+                recycle_symbols = int(recycle_symbols)
+                
+                if recycle_symbols>0:
+                    new_eps = torch.topk(torch.where(x[-1].flatten()!=0)[0],recycle_symbols).indices.to(device)
+                    print("Relu test",new_eps[0])
+                    index = torch.arange(len(new_eps)).to(device)
+                    new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
+                    new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+                    new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+                    new_eps_batch_last = x[-1].flatten()
+                    new_eps_batch_last[new_eps]=0
+                    new_eps_batch[-1] = new_eps_batch_last
+                    new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+                   
+                    x=x[:-1]
+
+                    x = torch.cat((x,new_eps_batch),dim=0) 
+                
+                else :
+                    pass    
+                
+               
+            else :
+                """
+                new_symbols_indexes =torch.where(x[-1]!=0)
+                """
             
+                new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
+            
+                index = torch.arange(len(new_eps)).to(device)
+                new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
+                new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
+                new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+                new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+                
 
-            x=x[:-1]
+                x=x[:-1]
 
-            x = torch.cat((x,new_eps_batch),dim=0) 
+                x = torch.cat((x,new_eps_batch),dim=0) 
        
         
         return x,x_min,x_max,x_true
