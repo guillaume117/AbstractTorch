@@ -1,6 +1,6 @@
 ### AbstractTorch 🦸
 
-![alt text](images/image.png)
+![principe](images/image.png)
 Ceci est un prototype de moteur d'évaluation s'appuyant sur Torch 😎
 
 L'idée originale consiste à utiliser la notion bien connue de batch pour faire l'évaluation d'un modèle. Cette astuce permet d'obtenir des résultats rapides ne nécessitant pas de refaire un modèle complexe. 
@@ -39,6 +39,22 @@ Pour implémenter le tenseur linéaire représentant la valeur absolue, on dupli
 
 Cette dernière couche peut être nulle si les symboles générés sont projetés sur une nouvelle dimension. 
 
+## Exemple : utilisation de Abstract Torch sur VGG19 
+
+```python
+with torch.no_grad():
+   result,x_min,x_max,x_true= C.abstract_forward(x.detach(),add_symbol=True,device=device)
+```
+Ici on évalue VGG19 sur une image de porte container, 
+Les résultats de la dominances sont les suivants: 
+
+
+![dom boat chart](images/dominance.png)
+
+
+L'affichage de la relevance montre ceci :
+
+![dom boat chart](images/relevance.png)
 
 ## Implémentation
 Une classe abstractModule permet de réaliser les différentes opérations abstraites. 
@@ -52,7 +68,7 @@ Un tenseur torch de dimension $N * C * H * W$ en float 32 possède une empreinte
 Un domaine abstrait basée sur une image de taille 3 * 224 * 224 génère une empreinte d'environ 90 GB. 
 si l'on applique une couche de convolution de noyau 64 , on aura un tenseur de 2 TO. Le code essaie d'éviter les copies intégrales du tenseur abstrait en cours d'évaluation, la mise à jours des variables est faite récurssivement dans les classes ReLU (x[index]=k*x[index]).
 
-🏃La bonne nouvelle c'est qu'on peut borner l'empreinte mémoire (caractéristique à venir, 👷... )
+🏃La bonne nouvelle c'est que l'on pourra borner l'empreinte mémoire (caractéristique à venir, 👷... )
 
 
 
