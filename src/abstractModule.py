@@ -138,34 +138,27 @@ class AbstractReLU(nn.Module):
             if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0])>AbstractReLU.max_symbol:
                 recycle_symbols = AbstractReLU.recycling*(AbstractReLU.max_symbol - len(x)+2)
                 recycle_symbols = int(recycle_symbols)
-                if recycle_symbols>0:
-                    new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
-                    index = torch.arange(len(new_eps)).to(device)
-                    new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1).shape
-                    new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-                    new_eps_batch[index,new_eps]=x[-1][new_eps]
-
-                    new_eps_batch_last = x[-1]
-                    new_eps_batch_last[new_eps]=0
-                    new_eps_batch[-1] = new_eps_batch_last
-                    
-                
-                    x=x[:-1]
-
-                    x = torch.cat((x,new_eps_batch),dim=0)
-                else :
-                    pass
             else :
-                #new_symbols_indexes =torch.where(x[-1]!=0)
-                new_eps =torch.where(x[-1]!=0)[0].to(device)
+                recycle_symbols = AbstractReLU.recycling*(len(torch.where(x[-1].flatten()!=0)[0]))
+                recycle_symbols = int(recycle_symbols)
+
+            if recycle_symbols>0:
+                new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
                 index = torch.arange(len(new_eps)).to(device)
                 new_eps_batch_shape = x[-1].expand(len(new_eps)+1,-1).shape
                 new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
                 new_eps_batch[index,new_eps]=x[-1][new_eps]
 
+                x[-1].flatten()[new_eps]=0
+                new_eps_batch[-1] =x[-1].flatten()
+                
+            
                 x=x[:-1]
 
                 x = torch.cat((x,new_eps_batch),dim=0)
+            else :
+                    pass
+           
     
 
         return x,x_min,x_max,x_true
@@ -223,40 +216,33 @@ class AbstractReLU(nn.Module):
         if add_symbol:
               
             
-            if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0]) >AbstractReLU.max_symbol:
+      
+
+
+            if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0])>AbstractReLU.max_symbol:
                 recycle_symbols = AbstractReLU.recycling*(AbstractReLU.max_symbol - len(x)+2)
                 recycle_symbols = int(recycle_symbols)
-                print(recycle_symbols)
-                if recycle_symbols>0:
-
-                    new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
-                  
-                    index = torch.arange(len(new_eps)).to(device)
-                    new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
-                    new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-                    new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
-
-                    new_eps_batch_last = x[-1].flatten()
-                    new_eps_batch_last[new_eps]=0
-                    new_eps_batch[-1] = new_eps_batch_last
-                    new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
-                
-                    x=x[:-1]
-
-                    x = torch.cat((x,new_eps_batch),dim=0) 
-                else : pass 
             else :
-                new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
+                recycle_symbols = AbstractReLU.recycling*(len(torch.where(x[-1].flatten()!=0)[0]))
+                recycle_symbols = int(recycle_symbols)
+            if recycle_symbols>0:
+
+                new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
+                
                 index = torch.arange(len(new_eps)).to(device)
                 new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
                 new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
                 new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
-                new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
-                
 
+                x[-1].flatten()[new_eps]=0
+                new_eps_batch[-1] =x[-1].flatten()
+                new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
+            
                 x=x[:-1]
 
                 x = torch.cat((x,new_eps_batch),dim=0) 
+            else : pass 
+          
                     
 
         return x,x_min,x_max,x_true
@@ -354,44 +340,29 @@ class AbstractMaxpool2D(nn.Module):
             if len(x)-2+len(torch.where(x[-1].flatten()!=0)[0])>AbstractMaxpool2D.max_symbol:
                 recycle_symbols = AbstractMaxpool2D.recycling*(AbstractMaxpool2D.max_symbol - len(x)+2)
                 recycle_symbols = int(recycle_symbols)
-                
-                if recycle_symbols>0:
-                    new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
-                    index = torch.arange(len(new_eps)).to(device)
-                    new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
-                    new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
-                    new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
-                    new_eps_batch_last = x[-1].flatten()
-                    new_eps_batch_last[new_eps]=0
-                    new_eps_batch[-1] = new_eps_batch_last
-                    new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
-                   
-                    x=x[:-1]
-
-                    x = torch.cat((x,new_eps_batch),dim=0) 
-                
-                else :
-                    pass    
-                
-               
             else :
-                """
-                new_symbols_indexes =torch.where(x[-1]!=0)
-                """
-            
-                new_eps =torch.where(x[-1].flatten()!=0)[0].to(device)
-            
+                recycle_symbols = AbstractMaxpool2D.recycling*(len(torch.where(x[-1].flatten()!=0)[0]))
+                recycle_symbols = int(recycle_symbols)
+                
+            if recycle_symbols>0:
+                new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
                 index = torch.arange(len(new_eps)).to(device)
                 new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
                 new_eps_batch = torch.zeros(new_eps_batch_shape).to(device)
                 new_eps_batch[index,new_eps]=x[-1].flatten()[new_eps]
+                new_eps_batch_last = x[-1].flatten()
+                new_eps_batch_last[new_eps]=0
+                new_eps_batch[-1] = new_eps_batch_last
                 new_eps_batch = new_eps_batch.reshape(x[-1].expand(len(new_eps)+1,-1,-1,-1).shape)
                 
-
                 x=x[:-1]
 
                 x = torch.cat((x,new_eps_batch),dim=0) 
-       
+            
+            else :
+                pass    
+                
+         
         
         return x,x_min,x_max,x_true
 
