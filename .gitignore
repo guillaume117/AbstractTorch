@@ -3,3 +3,6 @@ dataset/*
 !/dataset/test.pth
 __pycache__/
 notebook/dataset/FashionMNIST/*
+notebook/tensor_data.h5
+*.h5
+*.pyc
