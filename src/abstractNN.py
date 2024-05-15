@@ -113,7 +113,7 @@ class AbstractNN(nn.Module):
                     abstract_tensor_layer = lin_copy_bias_null(x_center.unsqueeze(0)).to(device)   
 
                     add_eps[indice] = abstract_tensor_layer
-                print('add befor stack')
+           
            
            
                 x=torch.cat((x[:-1],add_eps,x[-1].unsqueeze(0))).to(device)
