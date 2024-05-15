@@ -84,38 +84,39 @@ class AbstractNN(nn.Module):
             x_true=x_true.to(device)
             lin_weight_shape = lin[1].weight.data.shape
             lin_copy_bias_null = copy.deepcopy(lin).to(device)
-            lin_copy_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data)
+            lin_copy_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data).to(device)
             lin_abs_bias_null = copy.deepcopy(lin).to(device)
-            lin_abs_bias_null[1].weight.data =torch.abs(lin[1].weight.data)
-            lin_abs_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data)
+            lin_abs_bias_null[1].weight.data =torch.abs(lin[1].weight.data).to(device)
+            lin_abs_bias_null[1].bias.data = torch.zeros_like(lin[1].bias.data).to(device)
             lin_bias_shape =lin[1].bias.data.shape
              
-            x_true = lin(x_true)
-            x_value=lin(x[0])
-            x_epsilon=lin_copy_bias_null(x[1:-1])
-            x_noise=lin_abs_bias_null(x[-1])
+            x_true = lin(x_true).to(device)
+            x_value=lin(x[0]).to(device)
+            x_epsilon=lin_copy_bias_null(x[1:-1]).to(device)
+            x_noise=lin_abs_bias_null(x[-1]).to(device)
 
-            del x
-            x = torch.cat((x_value,x_epsilon,x_noise),dim=0)
+            
+            x = torch.cat((x_value,x_epsilon,x_noise),dim=0).to(device)
 
             index = lin_weights_alphas_index_and_values.indices.to(device)
             if len(index)>0:
          
-                values =lin_weights_alphas_index_and_values.values
+                values =lin_weights_alphas_index_and_values.values.to(device)
 
-                add_eps =[]
+                add_eps =torch.empty(len(index),lin_weight_shape[0])
                 for indice in range(len(index)):
-                    weight_epsilon= torch.zeros(lin_weight_shape).flatten()
-                    weight_epsilon[index[indice]] =values[indice]
-                    weight_epsilon = weight_epsilon.reshape(lin_weight_shape)
-                    lin_copy_bias_null[1].weight.data = weight_epsilon
-                    abstract_tensor_layer = lin_copy_bias_null(x_center.unsqueeze(0))   
+                
+                    weight_epsilon= torch.zeros(lin_weight_shape).flatten().to(device)
+                    weight_epsilon[index[indice]] =values[indice].to(device)
+                    weight_epsilon = weight_epsilon.reshape(lin_weight_shape).to(device)
+                    lin_copy_bias_null[1].weight.data = weight_epsilon.to(device)
+                    abstract_tensor_layer = lin_copy_bias_null(x_center.unsqueeze(0)).to(device)   
 
-                    add_eps.append(abstract_tensor_layer)
-            
-                add_eps = torch.stack(add_eps).squeeze(1)
+                    add_eps[indice] = abstract_tensor_layer
+                print('add befor stack')
            
-                x=torch.cat((x[:-1],add_eps,x[-1].unsqueeze(0)))
+           
+                x=torch.cat((x[:-1],add_eps,x[-1].unsqueeze(0))).to(device)
             
             
 
@@ -146,6 +147,7 @@ class AbstractNN(nn.Module):
             x_max = x[0] + torch.sum(torch.abs(x[1:]),dim=0)
           
             return x,x_min,x_max,x_true
+        
     @staticmethod
     def abstract_conv2D(conv:nn.Module,
                         x:torch.tensor,
