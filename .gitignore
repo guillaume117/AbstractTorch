@@ -6,3 +6,5 @@ notebook/dataset/FashionMNIST/*
 notebook/tensor_data.h5
 *.h5
 *.pyc
+*.mp4
+*.pkl
