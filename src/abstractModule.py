@@ -293,7 +293,7 @@ class AbstractMaxpool2D(nn.Module):
        #max(a,b,c,d) = relu(relu(relu(a-b)+b)+c)+d)
         
         x_result,x_min_result,x_max_result,x_true_result  = AbstractLinear.abstract_conv2D(conv_0,x,x_true,device=device)
-        x_result,x_min_result,x_max_result,x_true_result = AbstractReLU.abstract_relu_conv2D(x_result,x_min_result,x_max_result,x_true_result,device=device)
+        x_result,x_min_result,x_max_result,x_true_result = AbstractReLU.abstract_relu_conv2D(x_result,x_min_result,x_max_result,x_true_result,add_symbol=add_symbol,device=device)
         x_result_1,x_min_result_1,x_max_result_1,x_true_result_1  = AbstractLinear.abstract_conv2D(conv_1,x,x_true,device=device)
         
         x_result = AbstractBasic.abstract_addition(x_result_1,x_result)
@@ -308,7 +308,7 @@ class AbstractMaxpool2D(nn.Module):
         x_min_result_1 -= x_min_result
         x_max_result_1 -= x_max_result
         x_true_result_1 -= x_true_result
-        x_result_2,x_min_result_2,x_max_result_2,x_true_result_2  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,add_symbol=False,device=device)
+        x_result_2,x_min_result_2,x_max_result_2,x_true_result_2  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,add_symbol=add_symbol,device=device)
         
         x_result_2 = AbstractBasic.abstract_addition(x_result_2, x_result)
         
@@ -322,14 +322,14 @@ class AbstractMaxpool2D(nn.Module):
         x_min_result_1 -= x_min_result_2
         x_max_result_1 -= x_max_result_2
         x_true_result_1 -= x_true_result_2
-        x_result_3,x_min_result_3,x_max_result_3,x_true_result_3  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,device=device)
+        x_result_3,x_min_result_3,x_max_result_3,x_true_result_3  = AbstractReLU.abstract_relu_conv2D(x_result_1,x_min_result_1,x_max_result_1,x_true_result_1,add_symbol=add_symbol,device=device)
         
         x_result_3 = AbstractBasic.abstract_addition(x_result_3,x_result_2)
         
         x_min_result_3 += x_min_result_2
         x_max_result_3 += x_max_result_2
         x_true_result_3 += x_true_result_2
-        x= x_result_3
+        x = x_result_3
         
         x_min = x_min_result_3
         x_max = x_max_result_3
@@ -347,6 +347,7 @@ class AbstractMaxpool2D(nn.Module):
                 recycle_symbols = int(recycle_symbols)
             
             if recycle_symbols>0:
+                print('raté')
                 new_eps = torch.topk((x[-1].flatten()),recycle_symbols).indices.to(device)
                 index = torch.arange(len(new_eps)).to(device)
                 new_eps_batch_shape = x[-1].flatten().expand(len(new_eps)+1,-1).shape
@@ -386,8 +387,13 @@ class AbstractBasic(nn.Module):
                 y : tensor : the second tensor
                 output : z : tensor : the result of the addition
                 """
-        assert x.shape==y.shape; "The two tensors must have the same shape"
-        z = x+y
+        assert x[0].shape==y[0].shape; "The two tensors must have the same shape"
+        max_len = max(len(x),len(y))
+        null_epsilon_x = torch.zeros_like(x[0]).expand(max_len-len(x),-1,-1,-1)
+        x = torch.cat((x[:-1],null_epsilon_x,x[-1].unsqueeze(0)), dim = 0)
+        null_epsilon_y = torch.zeros_like(y[0]).expand(max_len-len(y),-1,-1,-1)
+        y = torch.cat((y[:-1],null_epsilon_y,y[-1].unsqueeze(0)),dim = 0)
+        z=x+y
         
         z[-1] = torch.abs(x[-1])+torch.abs(y[-1])
         return z
@@ -401,7 +407,13 @@ class AbstractBasic(nn.Module):
                 y : tensor : the second tensor
                 output : z : tensor : the result of the substraction
                 """
-        assert x.shape==y.shape; "The two tensors must have the same shape"
+        assert x[0].shape==y[0].shape; "The two tensors must have the same shape"
+        max_len = max(len(x),len(y))
+        null_epsilon_x = torch.zeros_like(x[0]).expand(max_len-len(x),-1,-1,-1)
+        x = torch.cat((x[:-1],null_epsilon_x,x[-1].unsqueeze(0)),dim = 0)
+        null_epsilon_y = torch.zeros_like(y[0]).expand(max_len-len(y),-1,-1,-1)
+        y = torch.cat((y[:-1],null_epsilon_y,y[-1].unsqueeze(0)),dim =0 )
+
         z = x-y
         z[-1] = torch.abs(x[-1])+torch.abs(y[-1])
         return z

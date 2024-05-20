@@ -8,3 +8,4 @@ notebook/tensor_data.h5
 *.pyc
 *.mp4
 *.pkl
+*.gif
